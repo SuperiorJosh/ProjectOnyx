@@ -41,12 +41,16 @@ class AProjectOnyxCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* SprintAction;
 
+	// Private variables
+	bool IsSprinting;
+	FVector2D PreviousMovement;
+
 public:
 	AProjectOnyxCharacter();
 	
 
 protected:
-	// Variables
+	// Protected variables
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float DodgeDistance;
 

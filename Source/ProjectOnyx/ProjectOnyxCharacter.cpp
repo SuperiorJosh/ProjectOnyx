@@ -49,6 +49,8 @@ AProjectOnyxCharacter::AProjectOnyxCharacter()
 
 	// Initialise variables
 	DodgeDistance = 1200.0f;
+	IsSprinting = false;
+	PreviousMovement = FVector2D(0.f, 0.f);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -76,18 +78,18 @@ void AProjectOnyxCharacter::SetupPlayerInputComponent(class UInputComponent* Pla
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
-		
-		// Dodging
-		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &AProjectOnyxCharacter::Dodge);
 
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AProjectOnyxCharacter::Move);
+
+		// Dodging
+		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &AProjectOnyxCharacter::Dodge);
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AProjectOnyxCharacter::Look);
 
 		// Sprinting
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AProjectOnyxCharacter::Sprint);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AProjectOnyxCharacter::Sprint);
 
 	}
 
@@ -113,6 +115,9 @@ void AProjectOnyxCharacter::Move(const FInputActionValue& Value)
 		// Add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
+
+		// Set previous movement variable
+		PreviousMovement = MovementVector;
 	}
 }
 
@@ -134,8 +139,24 @@ void AProjectOnyxCharacter::Dodge(const FInputActionValue& Value)
 	// Check that character is on the ground
 	if (!GetCharacterMovement()->IsFalling())
 	{
+		// Stop character from sprinting
+		if (IsSprinting)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = 500.0f;
+			IsSprinting = false;
+		}
+		
+		// Get direction of dodge
+		FVector DodgeDirection;
+		DodgeDirection.X = PreviousMovement.Y;
+		DodgeDirection.Y = PreviousMovement.X;
+		DodgeDirection.Z = GetActorForwardVector().Z;
+		
+		// Normalize the vector
+		DodgeDirection.Normalize();
+
 		// Character Dodge
-		GetCharacterMovement()->Velocity = GetActorForwardVector() * DodgeDistance;
+		GetCharacterMovement()->Velocity = DodgeDirection * DodgeDistance;
 
 		// Add animation and sync this to the timeline
 	}
@@ -144,6 +165,15 @@ void AProjectOnyxCharacter::Dodge(const FInputActionValue& Value)
 void AProjectOnyxCharacter::Sprint(const FInputActionValue& Value)
 {
 	// Set up a boolean to toggle sprinting on or off, also if character stops moving
-	GetCharacterMovement()->MaxWalkSpeed = 1000.0f;
+	if (IsSprinting)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 500.0f;
+		IsSprinting = false;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 1000.0f;
+		IsSprinting = true;
+	}
 }
 
